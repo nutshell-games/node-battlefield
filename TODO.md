@@ -1,0 +1,3 @@
+- units advance along path to goal.
+- reduce lifepoints and endgame.
+- draw cards and spawn unit from card

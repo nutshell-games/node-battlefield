@@ -1,0 +1,33 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "noImplicitAny": true,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "sourceMap": false,
+        "declaration": true,
+        "outDir": "./lib"
+    },
+    "filesGlob": [
+        "src/**/*.ts",
+        "typings/**/*.ts"
+    ],
+    "files": [
+        "src/battleUnit.ts",
+        "src/card.ts",
+        "src/energy.ts",
+        "src/entities.ts",
+        "src/geometry.ts",
+        "src/greeter.ts",
+        "src/index.ts",
+        "src/pathing.ts",
+        "src/player.ts",
+        "src/terrain.ts",
+        "src/world.ts",
+        "typings/bezier/bezier.d.ts",
+        "typings/lodash/lodash.d.ts",
+        "typings/node-uuid/node-uuid.d.ts",
+        "typings/node/node.d.ts",
+        "typings/tsd.d.ts"
+    ]
+}
