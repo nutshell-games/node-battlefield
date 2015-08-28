@@ -23,6 +23,7 @@ declare module Geometry {
         tValueForB: number;
         length: number;
         constructor(endpointA: Point, endpointB: Point, tValueForA: number, tValueForB: number);
+        getPointAtDistanceAlongSegment(distance: number, referencePointTValue: number): Point;
     }
 }
 export = Geometry;
