@@ -28,6 +28,7 @@
         "typings/lodash/lodash.d.ts",
         "typings/node-uuid/node-uuid.d.ts",
         "typings/node/node.d.ts",
+        "typings/solve-quadratic-euqation/solve-quadratic-equation.d.ts",
         "typings/tsd.d.ts"
     ]
 }

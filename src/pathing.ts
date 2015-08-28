@@ -6,8 +6,6 @@ import _ = require("lodash");
 // segments must be contiguous
 // enpoints must fall on segments
 
-
-
 class Path {
 
   endpointA:G.Point;
@@ -15,32 +13,41 @@ class Path {
   segments:G.Segment[];
   length:number;
   map:any;
+  bezier:G.BezierCurve;
 
-  constructor(endpointA:G.Point, endpointB:G.Point, segments:G.Segment[]) {
+  constructor(endpointA:G.Point, endpointB:G.Point, segments:G.Segment[], bezier:G.BezierCurve) {
     this.endpointA = endpointA;
     this.endpointB = endpointB;
     this.segments = segments;
+    this.bezier = bezier;
 
     this.length = this.calculateLength();
 
     this.map = null;
   }
 
-  private calculateLength() {
+  calculateLength() {
+
     var sumLength = 0;
 
-    _.each(this.segments,sumSegmentLength);
+    _.each(this.segments,function(segment:G.Segment) {
+      sumLength+=segment.length;
+    });
 
     return sumLength;
-
-    function sumSegmentLength(segment:G.Segment) {
-      sumLength+=segment.length;
-    }
   }
 
-  getTweenPoints(speed:number, tweenInterval:number, startPoint:G.Point):any {
+  getTweenPoints(speed:number, tweenInterval:number, originPoint:G.Point, destinationPoint:G.Point):any {
 
-    console.log("getTweenPoints",speed,tweenInterval,startPoint);
+// given a first and second point along a curve
+// how do you determine direction of movement,
+// i.e. order of progression through sub-segments of curve
+
+// is the movement positive or negative according to the t value of LUT points?
+// any point on the curve will have a t value (0-1)
+// compare the t values of origin and destination point
+
+    console.log("getTweenPoints",speed,tweenInterval,originPoint,destinationPoint);
 
   // given a unit's speed and tween interval,
   // what are all the tween points along the path?
@@ -52,11 +59,22 @@ class Path {
 
     var tweenPositions:any[] = [];
 
-    if (startPoint!==this.endpointA && startPoint!==this.endpointB) {
-      return new Error("startPoint must be an endpoint of this Path");
-    }
+    // TODO check if origin and destination are on the path
+    // if (startPoint!==this.endpointA && startPoint!==this.endpointB) {
+    //   return new Error("startPoint must be an endpoint of this Path");
+    // }
 
-    tweenPositions.push(startPoint);
+    // reverse order of segments if t value of origin is greater than destination
+    var originT = this.bezier.reverseCompute(originPoint),
+    destinationT = this.bezier.reverseCompute(destinationPoint);
+
+    // TODO handle origin and destination points that are NOT the endpoints
+    var segments:G.Segment[] = (originT<destinationT) ? this.segments : _.clone(this.segments).reverse();
+
+    console.log("t values:",originT,destinationT);
+    console.log(segments);
+
+    tweenPositions.push(originPoint);
 
     var distanceTraveledPerTween = speed * tweenInterval/1000;
     var segmentIndex = 0;
@@ -66,55 +84,54 @@ class Path {
     // subtract segments from distance
     // until remaining distance is less than current segment
 
-    while (segmentIndex<this.segments.length-1) {
+    while (segmentIndex<segments.length-1) {
 
       var distanceTraveled = distanceTraveledPerTween - remainderDistanceAlongSegment;
       var proceedToNextSegment = true;
 
       while (proceedToNextSegment) {
 
-        if (segmentIndex>this.segments.length-1) {
+        if (segmentIndex>segments.length-1) {
           proceedToNextSegment = false;
-        } else if (distanceTraveled < this.segments[segmentIndex].length) {
+        } else if (distanceTraveled < segments[segmentIndex].length) {
           proceedToNextSegment = false;
         } else {
-          console.log("distance until next tween",distanceTraveled);
-          distanceTraveled-=this.segments[segmentIndex].length;
+          //console.log("distance until next tween",distanceTraveled);
+          distanceTraveled-=segments[segmentIndex].length;
           segmentIndex++;
-          console.log("segment index",segmentIndex);
+          //console.log("segment index",segmentIndex);
         }
 
       }
 
       remainderDistanceAlongSegment = distanceTraveled;
 
-      console.log("distance remaining:", remainderDistanceAlongSegment);
+      //console.log("distance remaining:", remainderDistanceAlongSegment);
 
 
-      if (segmentIndex<this.segments.length-1) {
+      if (segmentIndex<segments.length-1) {
 
-        console.log("tween position at segment",segmentIndex);
+        //console.log("tween position at segment",segmentIndex);
         // find point at distance along segment
-        var nextTweenPosition = this.getPointAtDistanceAlongSegment(distanceTraveled,segmentIndex,startPoint);
+        var nextTweenPosition = this.getPointAtDistanceAlongSegment(distanceTraveled,segmentIndex,originPoint);
         tweenPositions.push(nextTweenPosition);
         segmentIndex++;
-        console.log("segment index",segmentIndex);
+        //console.log("segment index",segmentIndex);
       }
 
 
     }
     // continue to calculate positions until at final segment
 
-    var endPoint = (startPoint==this.endpointA) ? this.endpointB : this.endpointA;
-
-    tweenPositions.push(endPoint);
+    tweenPositions.push(destinationPoint);
 
 
     return tweenPositions;
   }
 
   // how to determine which point of the segment is the origin?
-  // the origin is the point closese to the origin of the path
+  // the origin is the point closest to the origin of the path
+
   getPointAtDistanceAlongSegment(distance:number, segmentIndex:number, originEndpoint:G.Point) {
 
     var segment = this.segments[segmentIndex];
@@ -138,13 +155,13 @@ class Path {
     // cos angle = x / distance
     // x = distance * cos angle
     var deltaX = distance * Math.cos(angle);
-    console.log("deltaX",deltaX);
+    //console.log("deltaX",deltaX);
 
     // opposite = y
     // sin angle = y / distance
     // y = distance * sin angle
     var deltaY = distance * Math.sin(angle);
-    console.log("deltaY",deltaY);
+    //console.log("deltaY",deltaY);
 
     // how to apply deltaX and deltaY to origin?
     var targetX:number, targetY:number;

@@ -303,7 +303,10 @@ module BattleField {
 
       // TODO account for movement speed modifiers over terrain
 
-      var tweenPoints = this.currentPath.getTweenPoints(this.baseMovementSpeed,this.world.frameDuration,this.rallyPoint);
+      var tweenPoints = this.currentPath.getTweenPoints(
+        this.baseMovementSpeed,this.world.frameDuration,
+        new G.Point(this.currentPosition.x,this.currentPosition.y),
+        this.rallyPoint);
       console.log("tweenPoints",tweenPoints);
 
       // TODO set orientation for Point

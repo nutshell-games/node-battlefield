@@ -40,7 +40,7 @@ class World {
       // for each unit and entity, advance to next predicted position
 
       var currentState = this.getCurrentState(this.currentTime);
-      console.log(currentState);
+      //console.log(currentState);
       //this.broadcast();
     }
 

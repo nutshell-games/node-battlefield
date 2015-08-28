@@ -11,15 +11,18 @@ declare module Geometry {
     class BezierCurve {
         private curve;
         private arclength;
-        private LUT;
+        LUT: Point[];
         constructor(endpointA: Point, controlPoint: Point, endpointB: Point);
         flatten(averageUnitsPerSegment: number): any[];
+        reverseCompute(point: Point): number;
     }
     class Segment {
         a: Point;
         b: Point;
+        tValueForA: number;
+        tValueForB: number;
         length: number;
-        constructor(endpointA: Point, endpointB: Point);
+        constructor(endpointA: Point, endpointB: Point, tValueForA: number, tValueForB: number);
     }
 }
 export = Geometry;
