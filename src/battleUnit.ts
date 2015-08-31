@@ -1,8 +1,11 @@
 /// <reference path="../typings/tsd.d.ts"/>
 
+
 import uuid = require("node-uuid");
 import _ = require("lodash");
-import Player = require("./player");
+//import Player = require("./player");
+import {Ability,Effect,EffectType} from "./ability";
+import {Player,PlayerOptions} from "./player";
 import Path = require("./pathing");
 import World = require("./world");
 import G = require("./geometry");
@@ -14,6 +17,11 @@ module BattleField {
     y: number;
     orientation: number;
     speed: number;
+    segmentIndex?:number;
+  }
+
+  export enum ActionType {
+    AnyAction, MovementAction, ActiveAction, PassiveAction
   }
 
   export class Action {
@@ -27,13 +35,16 @@ module BattleField {
     delayRemaining: number;
     willRepeat:boolean;
     hasRun:boolean = false;
+    type:ActionType;
+    actionKey:string = null; // the abilityID of an Active action
 
-    constructor( unit:BattleUnit, delay:number, willRepeat:boolean ) {
+    constructor( unit:BattleUnit, delay:number, willRepeat:boolean, type?:ActionType, actionKey?:string ) {
       this.unit = unit;
       this.delay = delay;
       this.delayRemaining = delay;
       this.willRepeat = willRepeat;
-
+      this.type = type || ActionType.AnyAction;
+      this.actionKey = actionKey || null;
     }
 
     advanceTime( timePassed: number ) {
@@ -62,14 +73,18 @@ module BattleField {
 
   export class StartMovementAction extends Action {
 
+    constructor( unit:BattleUnit, delay:number, willRepeat:boolean) {
+
+      super(unit,delay,willRepeat,ActionType.MovementAction);
+    }
+
     run() {
       // update projected positions
       // set orientation
       if (this.unit.projectedPositions.length>0) {
         this.unit.currentPosition = _.clone(this.unit.projectedPositions[0]);
         this.unit.projectedPositions.splice(0,1);
-        console.log(this.unit.id,"current position:",this.unit.currentPosition);
-        console.log("projectedPositions",this.unit.projectedPositions.length);
+        console.log("unit advanced position");
       }
       super.run();
     }
@@ -86,18 +101,18 @@ module BattleField {
 
   }
 
-  class SetAggroTargetAction extends Action {
+  class SetAbilityAction extends Action {
 
     target: any;
     ability: Ability;
     // override current movement with movement to target
 
-    // constructor(delayRemaining:number, ability:Ability, target:any) {
-    //   this.ability = ability;
-    //   this.target = target;
-    //
-    //   super(delayRemaining,false);
-    // }
+    constructor(ability:Ability, target:any) {
+      this.ability = ability;
+      this.target = target;
+
+      super(ability.battleUnit, ability.castingTime, false, ActionType.ActiveAction, ability.abilityID);
+    }
 
     run() {
       this.ability.applyEffects(this.target);
@@ -105,109 +120,11 @@ module BattleField {
     }
   }
 
-  class CancelAggroTargetAction extends Action {
+  class CancelAbilityAction extends Action {
 
   }
 
-
-  export enum TargetType {
-    Self, SingleAlly, SingleEnemy, Point, Area
-  }
-
-  export interface Effect {
-    // buffs
-    // debuffs
-    effectID: string;
-    duration: number;
-    type: EffectType;
-    value: number;
-  }
-
-  export enum EffectType {
-    Damage, Heal, Slow, Root, Stun, Haste
-  }
-
-  export class Ability {
-
-    battleUnit: BattleUnit;
-    abilityID: string;
-    isEnabled: boolean;
-    isActive: boolean; // active abilities need to be scheduled actions
-    targetType: TargetType;
-    targetQualifiers: string[];
-    targetRange: number;
-    castingTime: number;
-    cooldownTime: number;
-    currentCooldownTime: number;
-    effectsApplied: Effect[];
-
-    constructor( battleUnit:BattleUnit, abilityID:string, effectsApplied:Effect[], castingTime:number, cooldownTime:number, targetType:TargetType, targetQualifiers:string[], targetRange:number, isActive:boolean) {
-      this.battleUnit = battleUnit;
-      this.abilityID = abilityID;
-      this.effectsApplied = effectsApplied;
-      this.castingTime = castingTime;
-      this.cooldownTime = cooldownTime;
-      this.targetType = targetType;
-      this.targetQualifiers = targetQualifiers;
-      this.targetRange = targetRange;
-      this.isActive = isActive;
-
-      this.cooldownTime = 0;
-      this.isEnabled = true;
-    }
-
-    updateCooldown( timePassed:number ) {
-      if (this.cooldownTime==0) return;
-      if (this.currentCooldownTime>0) this.currentCooldownTime-=timePassed;
-
-      if (this.currentCooldownTime>0 && this.isEnabled) {
-        this.isEnabled = false;
-        return;
-      }
-
-      if (this.currentCooldownTime<0) this.currentCooldownTime = 0;
-      if (this.currentCooldownTime==0 && !this.isEnabled) {
-        this.isEnabled = true;
-        return;
-      }
-
-    }
-
-    calculateProjectedPositions() {
-
-    }
-
-    getPriorityTarget():BattleUnit[] {
-
-      if (!this.isEnabled) return [];
-
-      var targetsInRange:BattleUnit[] = []; // get all units in range from World
-      var validTargets:BattleUnit[] = [];
-
-      targetsInRange.forEach(function(battleUnit:BattleUnit){
-        // check target type
-        // check qualifiers
-        // check target alive
-
-        validTargets.push(battleUnit);
-      });
-
-      if (validTargets.length==0) return [];
-
-      // prioritize target
-      // sort targets by distance
-
-      var priorityTarget = validTargets[0];
-
-      return [priorityTarget];
-    }
-
-    applyEffects( target:BattleUnit ) {
-      this.effectsApplied.forEach(function(effect:Effect){
-        target.scheduleEffect(effect);
-      })
-    }
-  }
+  // Ability
 
   export interface MovementRating {
     terrainType:string;
@@ -222,6 +139,13 @@ module BattleField {
     classID:string;
     HP:number;
     baseMovementSpeed:number;
+    visionRange:number;
+  }
+
+  export enum UnitCombatState {
+    StationaryNeutral, MovingNeutral,
+    MovingAggro, MovingAlly,
+    StationaryAggro, StationaryAlly
   }
 
   export class BattleUnit {
@@ -231,10 +155,16 @@ module BattleField {
     owner: Player;
     controller: Player;
 
+    activeTarget:BattleUnit = null;
+    activeAbility:Ability = null;
+    currentAction:Action = null;
+    movementAction:StartMovementAction = null;
+
     classID: string;
     attributes: AttributeMap = {};
     abilities: Ability[] = [];
     statuses: string[] = []; // (e.g. "flying", "poisoned", "slow")
+    combatState:UnitCombatState = UnitCombatState.StationaryNeutral;
 
     baseMovementSpeed:number;
     movementRatings:MovementRating[];
@@ -258,29 +188,53 @@ module BattleField {
       this.classID = options.classID;
       this.attributes["HP"] = options.HP;
       this.baseMovementSpeed = options.baseMovementSpeed;
+      this.visionRange = options.visionRange;
 
       this.world = world;
     }
 
+    addAbility(ability:Ability) {
+      if (!_.includes(this.abilities,ability)) {
+        this.abilities.push(ability);
+      }
+    }
+
     updateState( timePassed:number ) {
+
+      console.log("unit state",this.id,"-----------------");
+      console.log("pre-action pending effects:",this.pendingEffects.length);
+
+      // commit all pending effects to attributes
+      _.each(this.pendingEffects,function(effect:Effect){
+        this.applyEffect(effect);
+      },this);
+
+
+      console.log("current position:",this.currentPosition);
+      console.log("projectedPositions",this.projectedPositions.length);
 
       // check for new priority actions and actions to be scheduled
       // currently scheduled actions (i.e. movement, attacking) may be cancelled
       this.checkForActiveTarget(timePassed);
+
+      console.log("pending actions:",this.pendingActions.length);
+
 
       // deduct time from all scheduled/queued effects/actions
       this.pendingActions.forEach(function(action:Action){
         action.advanceTime(timePassed);
 
         if (!action.willRepeat && action.hasRun) {
-          _.without(this.pendingActions,action);
+         this.pendingActions = _.without(this.pendingActions,action);
         }
       },this);
 
+      console.log("post-action pending effects:",this.pendingEffects.length);
+
       // commit all pending effects to attributes
-      this.pendingEffects.forEach(function(effect:Effect){
+      _.each(this.pendingEffects,function(effect:Effect){
         this.applyEffect(effect);
-      });
+      },this);
 
       // run actions that are due
 
@@ -293,10 +247,24 @@ module BattleField {
 
     setPathAndRallyPoint( path:Path, rallyPoint:G.Point ) {
       this.rallyPoint = rallyPoint;
+      this.combatState = UnitCombatState.MovingNeutral;
+
+      // if current path does not = new path
+      // remove unit from current path
+      // add unit to new path
+      if (path!==this.currentPath && this.currentPath!==null) {
+        this.currentPath.removeUnit(this);
+      }
       this.currentPath = path;
+      this.currentPath.addUnit(this);
 
       // get travel path to rally point
       this.updateProjectedPositions();
+
+      // TODO when to schedule movement action?
+      var movementAction:StartMovementAction = new StartMovementAction(this,this.world.frameDuration,true);
+      this.movementAction = movementAction;
+      this.scheduleAction(movementAction);
     }
 
     updateProjectedPositions() {
@@ -328,30 +296,73 @@ module BattleField {
 
       var validAbilityActivations:Action[] = [];
 
+      if (this.activeTarget!==null && this.activeAbility!==null) {
+
+      }
+
       this.abilities.forEach(function(ability:Ability){
+        //console.log("check ability",ability);
 
         // deduct cooldown time
         ability.updateCooldown(timePassed);
         var targets:BattleUnit[] = ability.getPriorityTarget();
+        console.log("valid targets",targets.length);
 
         if (targets.length>0) {
-          //var action = new SetAggroTargetAction(this.castingTime,this,targets[0]);
+          var action = new SetAbilityAction(ability,targets[0]);
+          validAbilityActivations.push(action);
         }
 
       });
 
-      if (validAbilityActivations.length>0) {
-        // prioritize active ability among blocking actions. active abilities are blocking
+      if (validAbilityActivations.length==0) return false;
+        // TODO prioritize active ability among blocking actions. active abilities are blocking
         // immediately schedule non-blocking actions. passive actions are non-blocking
 
-        //this.hasActiveTarget = targets.length>0;
         var priorityAction = validAbilityActivations[0];
+        console.log("priorityAction",priorityAction.type);
 
-        this.scheduleAction(priorityAction);
-      }
+        if (this.currentAction==null) {
+          // pause unit movement, while attacking
+          if (priorityAction.type==ActionType.ActiveAction) {
+            console.log("STOPPING MOVEMENT OF ATTACKER.");
+            this.stopMovemement();
+            this.currentAction = priorityAction;
+          }
+
+          // TODO update combat state
+          // this.battleUnit.combatState = UnitCombatState.StationaryAggro;
+          //this.battleUnit.combatState = UnitCombatState.MovingAggro;
+          // TODO set rally point to target unit
+
+
+          this.scheduleAction(priorityAction);
+          console.log("ATTACK SCHEDULED.");
+
+          return true;
+
+        } else {
+          // if priority action matches unit's current blobking/active action
+          // the priority action has already been scheduled
+          if (priorityAction.type==this.currentAction.type && priorityAction.actionKey==this.currentAction.actionKey) {
+              console.log("ATTACK ALREADY SCHEDULED.");
+              return false;
+          }
+
+        }
+
     }
 
+    stopMovemement() {
+      console.log("stopping movement",this.id);
+      // only pause movement while unit is attacking
+      // resume movement after target is destroyed || removed
 
+      if (this.movementAction!==null) {
+        console.log("cancelling action...")
+        this.cancelAction(this.movementAction);
+      }
+    }
 
 
     getStateDeltas():any {
@@ -362,11 +373,20 @@ module BattleField {
 
       switch (effect.type) {
         case EffectType.Damage:
-        var HP:number = this.attributes["HP"];
-        HP -= effect.value;
-        if (HP<=0) {
-          HP = 0;
+
+        this.attributes["HP"] -= effect.value;
+        console.log("unit HP after damage",this.attributes["HP"]);
+        if (this.attributes["HP"]<=0) {
+          this.attributes["HP"] = 0;
           this.isAlive = false;
+        } else {
+          // if unit survived
+          // source of damage will draw aggro
+          // stop unit, cancel movement
+          console.log("UNIT STOPPED after damage");
+          if (this.movementAction!==null) {
+            this.cancelAction(this.movementAction);
+          }
         }
         break;
 
@@ -374,6 +394,7 @@ module BattleField {
         break;
       }
 
+      this.pendingEffects = _.without(this.pendingEffects,effect);
     }
 
     destroy() {
@@ -388,13 +409,36 @@ module BattleField {
       this.pendingActions.push(action);
     }
 
+    cancelAction( action:Action ) {
+      if (_.contains(this.pendingActions,action)) {
+        this.pendingActions = _.without(this.pendingActions,action);
+        console.log("action cancelled");
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+  }
+
+  class AggroCalculator {
+
+    unit:BattleUnit;
+    // given all the valid targets for a unit's actions, which target/action is prioritized?
+    // i.e. which enemy draws aggro?
+
+
+    constructor(unit:BattleUnit) {
+      this.unit = unit;
+    }
+
+
+
+
   }
 
 }
 
-class AggroCalculator {
-  // given all the valid targets for a unit's actions, which target/action is prioritized?
-  // i.e. which enemy draws aggro?
-}
+
 
 export = BattleField;

@@ -2,6 +2,7 @@
 
 import G = require("./geometry");
 import _ = require("lodash");
+import {BattleUnit} from "./battleUnit";
 
 // segments must be contiguous
 // enpoints must fall on segments
@@ -14,6 +15,7 @@ class Path {
   length:number;
   map:any;
   bezier:G.BezierCurve;
+  units:BattleUnit[] = [];
 
   constructor(endpointA:G.Point, endpointB:G.Point, segments:G.Segment[], bezier:G.BezierCurve) {
     this.endpointA = endpointA;
@@ -131,77 +133,16 @@ class Path {
     return tweenPositions;
   }
 
-  // how to determine which point of the segment is the origin?
-  // the origin is the point closest to the origin of the path
+  removeUnit(unit:BattleUnit) {
+    _.without(this.units,unit);
+  }
 
-  // the origin segment endpoint is the endpoint with a t value
-  // closer to the t value of the movement origin point
-  // getPointAtDistanceAlongSegment(distance:number, segmentIndex:number, originEndpoint:G.Point) {
-  //
-  //   var segment = this.segments[segmentIndex];
-  //   var targetOrigin = originEndpoint.closestPointAmongPoints([segment.a,segment.b]);
-  //
-  //   // with current segment
-  //   // get point at distance along line
-  //   // y - y1 = m(x - x1)
-  //
-  //   var slope = (segment.a.y - segment.b.y) / (segment.a.x - segment.b.x);
-  //
-  //   // y = slope * x;
-  //
-  //   // angle = arctan (slope)
-  //   var angle = Math.atan(slope);
-  //
-  //   // distance = hypotenuse
-  //   // if slope is positive
-  //
-  //   // adjacent = x
-  //   // cos angle = x / distance
-  //   // x = distance * cos angle
-  //   var deltaX = distance * Math.cos(angle);
-  //   //console.log("deltaX",deltaX);
-  //
-  //   // opposite = y
-  //   // sin angle = y / distance
-  //   // y = distance * sin angle
-  //   var deltaY = distance * Math.sin(angle);
-  //   //console.log("deltaY",deltaY);
-  //
-  //   // how to apply deltaX and deltaY to origin?
-  //   var targetX:number, targetY:number;
-  //
-  //   // targetX
-  //   if (segment.a.y==segment.b.y) {
-  //     targetX = targetOrigin.x;
-  //   } else {
-  //     var originLeft = (segment.a.x>segment.b.x) ? segment.b : segment.a;
-  //     var originRight = (segment.a.x>segment.b.x) ? segment.a : segment.b;
-  //
-  //     if ( (targetOrigin==originLeft && slope>0) || (targetOrigin==originRight && slope<0) ) {
-  //       targetX = targetOrigin.x + deltaX;
-  //     } else if ( (targetOrigin==originRight && slope>0) || (targetOrigin==originLeft && slope<0) ) {
-  //       targetX = targetOrigin.x - deltaX;
-  //     }
-  //   }
-  //
-  //   // targetY
-  //   if (segment.a.x==segment.b.x) {
-  //     targetY = targetOrigin.y;
-  //   } else {
-  //     var originLow = (segment.a.y>segment.b.y) ? segment.b : segment.a;
-  //     var originHigh = (segment.a.y>segment.b.y) ? segment.a : segment.b;
-  //
-  //     if ( targetOrigin==originLow ) {
-  //       targetY = targetOrigin.y + deltaY;
-  //     } else if ( targetOrigin==originHigh ) {
-  //       targetY = targetOrigin.y - deltaY;
-  //     }
-  //   }
-  //
-  //   var pointAlongPath = new G.Point(targetX,targetY);
-  //
-  //   return pointAlongPath;
-  // }
+  addUnit(unit:BattleUnit) {
+    if (!_.includes(this.units,unit)) {
+      this.units.push(unit);
+    }
+  }
+
 }
 
 export = Path;

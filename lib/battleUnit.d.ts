@@ -1,5 +1,6 @@
 /// <reference path="../typings/tsd.d.ts" />
-import Player = require("./player");
+import { Ability, Effect } from "./ability";
+import { Player } from "./player";
 import Path = require("./pathing");
 import World = require("./world");
 import G = require("./geometry");
@@ -9,6 +10,13 @@ declare module BattleField {
         y: number;
         orientation: number;
         speed: number;
+        segmentIndex?: number;
+    }
+    enum ActionType {
+        AnyAction = 0,
+        MovementAction = 1,
+        ActiveAction = 2,
+        PassiveAction = 3,
     }
     class Action {
         unit: BattleUnit;
@@ -16,52 +24,16 @@ declare module BattleField {
         delayRemaining: number;
         willRepeat: boolean;
         hasRun: boolean;
-        constructor(unit: BattleUnit, delay: number, willRepeat: boolean);
+        type: ActionType;
+        actionKey: string;
+        constructor(unit: BattleUnit, delay: number, willRepeat: boolean, type?: ActionType, actionKey?: string);
         advanceTime(timePassed: number): void;
         checkWillRunAction(): boolean;
         run(): void;
     }
     class StartMovementAction extends Action {
+        constructor(unit: BattleUnit, delay: number, willRepeat: boolean);
         run(): void;
-    }
-    enum TargetType {
-        Self = 0,
-        SingleAlly = 1,
-        SingleEnemy = 2,
-        Point = 3,
-        Area = 4,
-    }
-    interface Effect {
-        effectID: string;
-        duration: number;
-        type: EffectType;
-        value: number;
-    }
-    enum EffectType {
-        Damage = 0,
-        Heal = 1,
-        Slow = 2,
-        Root = 3,
-        Stun = 4,
-        Haste = 5,
-    }
-    class Ability {
-        battleUnit: BattleUnit;
-        abilityID: string;
-        isEnabled: boolean;
-        isActive: boolean;
-        targetType: TargetType;
-        targetQualifiers: string[];
-        targetRange: number;
-        castingTime: number;
-        cooldownTime: number;
-        currentCooldownTime: number;
-        effectsApplied: Effect[];
-        constructor(battleUnit: BattleUnit, abilityID: string, effectsApplied: Effect[], castingTime: number, cooldownTime: number, targetType: TargetType, targetQualifiers: string[], targetRange: number, isActive: boolean);
-        updateCooldown(timePassed: number): void;
-        calculateProjectedPositions(): void;
-        getPriorityTarget(): BattleUnit[];
-        applyEffects(target: BattleUnit): void;
     }
     interface MovementRating {
         terrainType: string;
@@ -74,16 +46,30 @@ declare module BattleField {
         classID: string;
         HP: number;
         baseMovementSpeed: number;
+        visionRange: number;
+    }
+    enum UnitCombatState {
+        StationaryNeutral = 0,
+        MovingNeutral = 1,
+        MovingAggro = 2,
+        MovingAlly = 3,
+        StationaryAggro = 4,
+        StationaryAlly = 5,
     }
     class BattleUnit {
         world: World;
         id: string;
         owner: Player;
         controller: Player;
+        activeTarget: BattleUnit;
+        activeAbility: Ability;
+        currentAction: Action;
+        movementAction: StartMovementAction;
         classID: string;
         attributes: AttributeMap;
         abilities: Ability[];
         statuses: string[];
+        combatState: UnitCombatState;
         baseMovementSpeed: number;
         movementRatings: MovementRating[];
         isAlive: boolean;
@@ -96,16 +82,19 @@ declare module BattleField {
         pendingEffects: any[];
         pendingActions: any[];
         constructor(world: World, options: BattleUnitOptions);
+        addAbility(ability: Ability): void;
         updateState(timePassed: number): void;
         setOrientation(point: G.Point, normalPoint: G.Point): void;
         setPathAndRallyPoint(path: Path, rallyPoint: G.Point): void;
         updateProjectedPositions(): void;
-        checkForActiveTarget(timePassed: number): void;
+        checkForActiveTarget(timePassed: number): boolean;
+        stopMovemement(): void;
         getStateDeltas(): any;
         applyEffect(effect: Effect): void;
         destroy(): void;
         scheduleEffect(effect: Effect): void;
         scheduleAction(action: Action): void;
+        cancelAction(action: Action): boolean;
     }
 }
 export = BattleField;

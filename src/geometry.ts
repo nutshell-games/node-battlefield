@@ -5,6 +5,40 @@ import QuadraticSolver = require("solve-quadratic-equation");
 
 module Geometry {
 
+  export function isPointInCircle(targetPoint:Coordinate,circleOrigin:Coordinate,circleRadius:number):boolean {
+
+
+    var center = [circleOrigin.x,circleOrigin.y];
+    var x = targetPoint.x, y = targetPoint.y;
+    var distance = Math.pow( (Math.pow(x - center[0],2) + Math.pow(y - center[1],2)), 0.5 );
+
+    //console.log("isPointInCircle");
+    //console.log(center,x,y);
+    //console.log(distance,circleRadius);
+
+    return ( distance < circleRadius );
+  }
+
+  /*
+  setCircularRange: function (centerX, centerY, radius) {
+
+    this.center = [centerX,centerY];
+    this.radius = radius;
+    this.checkInRange = checkInRange.bind(this);
+
+    function checkInRange(x,y){
+      var distance = Math.pow( (Math.pow(x - this.center[0],2) + Math.pow(y - this.center[1],2)), 0.5 );
+
+      return ( distance < radius );
+    }
+  },
+  */
+
+  export interface Coordinate {
+    x:number;
+    y:number;
+  }
+
   export class Point {
     x: number;
     y: number;

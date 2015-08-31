@@ -32,6 +32,7 @@ class World {
 
     advanceFrame() {
       this.currentTime+=this.frameDuration;
+      console.log("==================");
       console.log("current time:",this.currentTime);
 
       // TODO remove and add units
@@ -49,10 +50,6 @@ class World {
         x: location.x, y: location.y, orientation: null, speed:unit.baseMovementSpeed
       };
       this.units.push(unit);
-
-      // TODO when to schedule movement action?
-      var movementAction:BF.StartMovementAction = new BF.StartMovementAction(unit,this.frameDuration,true);
-      unit.scheduleAction(movementAction);
     }
 
     private getCurrentState(currentTime:number) {

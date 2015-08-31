@@ -1,9 +1,20 @@
-declare class Player {
+/// <reference path="../typings/tsd.d.ts" />
+import BF = require("./battleUnit");
+export interface PlayerOptions {
     lifeTotal: number;
-    static username: string;
-    static userID: string;
+    username: string;
+    userID: string;
+    teamID: string;
+}
+export declare class Player {
+    lifeTotal: number;
+    username: string;
+    userID: string;
+    teamID: string;
     basesControlled: any[];
     energyReserve: any[];
-    constructor();
+    unitsOwned: BF.BattleUnit[];
+    unitsControlled: BF.BattleUnit[];
+    constructor(options: PlayerOptions);
+    fieldUnit(unit: BF.BattleUnit): void;
 }
-export = Player;

@@ -1,5 +1,10 @@
 /// <reference path="../typings/tsd.d.ts" />
 declare module Geometry {
+    function isPointInCircle(targetPoint: Coordinate, circleOrigin: Coordinate, circleRadius: number): boolean;
+    interface Coordinate {
+        x: number;
+        y: number;
+    }
     class Point {
         x: number;
         y: number;

@@ -13,6 +13,7 @@
         "typings/**/*.ts"
     ],
     "files": [
+        "src/ability.ts",
         "src/battleUnit.ts",
         "src/card.ts",
         "src/energy.ts",
