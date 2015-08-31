@@ -19,6 +19,7 @@ declare module BattleField {
         PassiveAction = 3,
     }
     class Action {
+        isEnabled: boolean;
         unit: BattleUnit;
         delay: number;
         delayRemaining: number;
@@ -28,6 +29,8 @@ declare module BattleField {
         actionKey: string;
         constructor(unit: BattleUnit, delay: number, willRepeat: boolean, type?: ActionType, actionKey?: string);
         advanceTime(timePassed: number): void;
+        disable(): void;
+        enable(): void;
         checkWillRunAction(): boolean;
         run(): void;
     }
@@ -88,6 +91,7 @@ declare module BattleField {
         setPathAndRallyPoint(path: Path, rallyPoint: G.Point): void;
         updateProjectedPositions(): void;
         checkForActiveTarget(timePassed: number): boolean;
+        disableMovement(): void;
         stopMovemement(): void;
         getStateDeltas(): any;
         applyEffect(effect: Effect): void;

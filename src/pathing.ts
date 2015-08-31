@@ -134,7 +134,7 @@ class Path {
   }
 
   removeUnit(unit:BattleUnit) {
-    _.without(this.units,unit);
+    this.units = _.without(this.units,unit);
   }
 
   addUnit(unit:BattleUnit) {

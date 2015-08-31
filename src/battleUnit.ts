@@ -30,6 +30,7 @@ module BattleField {
     // start movement
     // stop movement
 
+    isEnabled:boolean = true;
     unit:BattleUnit;
     delay:number;
     delayRemaining: number;
@@ -62,8 +63,19 @@ module BattleField {
       }
     }
 
+    disable() {
+      if (this.isEnabled) {
+        this.isEnabled = false;
+        this.delayRemaining = this.delay;
+      }
+    }
+
+    enable() {
+      this.isEnabled = true;
+    }
+
     checkWillRunAction():boolean {
-      return (this.delayRemaining<=0);
+      return (this.delayRemaining<=0 && this.isEnabled);
     }
 
     run() {
@@ -103,6 +115,7 @@ module BattleField {
 
   class SetAbilityAction extends Action {
 
+
     target: any;
     ability: Ability;
     // override current movement with movement to target
@@ -116,6 +129,12 @@ module BattleField {
 
     run() {
       this.ability.applyEffects(this.target);
+
+      // unblock active ability for action scheduling
+      if (this.type==ActionType.ActiveAction) {
+        this.unit.currentAction = null;
+      }
+
       super.run();
     }
   }
@@ -201,6 +220,11 @@ module BattleField {
 
     updateState( timePassed:number ) {
 
+      if (!this.isAlive) {
+        this.destroy();
+        return;
+      }
+
       console.log("unit state",this.id,"-----------------");
       console.log("pre-action pending effects:",this.pendingEffects.length);
 
@@ -222,6 +246,8 @@ module BattleField {
 
       // deduct time from all scheduled/queued effects/actions
       this.pendingActions.forEach(function(action:Action){
+
+        // run actions that are due
         action.advanceTime(timePassed);
 
         if (!action.willRepeat && action.hasRun) {
@@ -236,9 +262,12 @@ module BattleField {
         this.applyEffect(effect);
       },this);
 
-      // run actions that are due
+      
+      if (!this.isAlive) {
+        this.destroy();
+        return;
+      }
 
-      if (!this.isAlive) this.destroy();
     }
 
     setOrientation( point:G.Point, normalPoint:G.Point ) {
@@ -315,7 +344,16 @@ module BattleField {
 
       });
 
-      if (validAbilityActivations.length==0) return false;
+      // if no active actions to perform,
+      // resume pasued movement toward rally point
+      if (validAbilityActivations.length==0) {
+        if (this.movementAction!==null) {
+          this.movementAction.enable();
+        }
+        return false;
+      }
+
+
         // TODO prioritize active ability among blocking actions. active abilities are blocking
         // immediately schedule non-blocking actions. passive actions are non-blocking
 
@@ -326,7 +364,8 @@ module BattleField {
           // pause unit movement, while attacking
           if (priorityAction.type==ActionType.ActiveAction) {
             console.log("STOPPING MOVEMENT OF ATTACKER.");
-            this.stopMovemement();
+            //this.stopMovemement();
+            this.movementAction.disable();
             this.currentAction = priorityAction;
           }
 
@@ -353,6 +392,12 @@ module BattleField {
 
     }
 
+    disableMovement() {
+      if (this.movementAction!==null) {
+        this.movementAction.isEnabled = false;
+      }
+    }
+
     stopMovemement() {
       console.log("stopping movement",this.id);
       // only pause movement while unit is attacking
@@ -375,7 +420,7 @@ module BattleField {
         case EffectType.Damage:
 
         this.attributes["HP"] -= effect.value;
-        console.log("unit HP after damage",this.attributes["HP"]);
+        console.log(">>>>>>> UNIT DAMAGED","current HP:",this.attributes["HP"]);
         if (this.attributes["HP"]<=0) {
           this.attributes["HP"] = 0;
           this.isAlive = false;
@@ -398,7 +443,10 @@ module BattleField {
     }
 
     destroy() {
+      // remove from path
+      this.currentPath.removeUnit(this);
 
+      // cancel all actions
     }
 
     scheduleEffect( effect:Effect ) {
