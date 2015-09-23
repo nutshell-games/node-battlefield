@@ -16,6 +16,7 @@
         "src/ability.ts",
         "src/battleUnit.ts",
         "src/card.ts",
+        "src/checkpoint.ts",
         "src/energy.ts",
         "src/entities.ts",
         "src/geometry.ts",

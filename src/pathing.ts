@@ -3,6 +3,7 @@
 import G = require("./geometry");
 import _ = require("lodash");
 import {BattleUnit} from "./battleUnit";
+import {Checkpoint} from "./checkpoint";
 
 // segments must be contiguous
 // enpoints must fall on segments
@@ -16,12 +17,17 @@ class Path {
   map:any;
   bezier:G.BezierCurve;
   units:BattleUnit[] = [];
+  checkpoints:Checkpoint[] = [];
 
   constructor(endpointA:G.Point, endpointB:G.Point, segments:G.Segment[], bezier:G.BezierCurve) {
     this.endpointA = endpointA;
     this.endpointB = endpointB;
     this.segments = segments;
     this.bezier = bezier;
+
+    //automatically create checkpoints at endpoints
+    this.checkpoints.push(new Checkpoint(endpointA));
+    this.checkpoints.push(new Checkpoint(endpointB));
 
     this.length = this.calculateLength();
 
@@ -141,6 +147,10 @@ class Path {
     if (!_.includes(this.units,unit)) {
       this.units.push(unit);
     }
+  }
+
+  addCheckpoint(checkpoint:Checkpoint) {
+
   }
 
 }
